@@ -1,0 +1,111 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: users
+    // Document ID: uid
+    // Fields: uid, email, displayName, role
+    //
+    // Collection: patients
+    // Document ID: auto-generated
+    // Fields: name, phone, email
+    //
+    // Collection: appointments
+    // Document ID: auto-generated
+    // Fields: patientId, dentistId, startTime, endTime, status, notes
+    //
+    // Collection: materials
+    // Document ID: auto-generated
+    // Fields: name, unit, currentStock, minStock, averageConsumption
+    //
+    // Collection: inventoryLogs
+    // Document ID: auto-generated
+    // Fields: materialId, quantity, type, date, userId
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "CaioHenrique270@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role']) &&
+             data.uid is string &&
+             data.email is string &&
+             data.role in ['admin', 'dentist', 'staff'];
+    }
+
+    function isValidPatient(data) {
+      return data.keys().hasAll(['name']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100;
+    }
+
+    function isValidAppointment(data) {
+      return data.keys().hasAll(['patientId', 'dentistId', 'startTime', 'endTime', 'status']) &&
+             data.patientId is string &&
+             data.dentistId is string &&
+             data.startTime is string &&
+             data.endTime is string &&
+             data.status in ['scheduled', 'completed', 'cancelled'];
+    }
+
+    function isValidMaterial(data) {
+      return data.keys().hasAll(['name', 'unit', 'currentStock', 'minStock']) &&
+             data.name is string && data.name.size() > 0 &&
+             data.unit is string &&
+             data.currentStock is number &&
+             data.minStock is number;
+    }
+
+    function isValidInventoryLog(data) {
+      return data.keys().hasAll(['materialId', 'quantity', 'type', 'date', 'userId']) &&
+             data.materialId is string &&
+             data.quantity is number &&
+             data.type in ['consumption', 'addition'] &&
+             data.date is string &&
+             data.userId is string;
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin()) && isValidUser(request.resource.data);
+    }
+
+    match /patients/{patientId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && isValidPatient(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /appointments/{appointmentId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && isValidAppointment(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /materials/{materialId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && isValidMaterial(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /inventoryLogs/{logId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidInventoryLog(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+  }
+}

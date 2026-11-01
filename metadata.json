@@ -1,0 +1,5 @@
+{
+  "name": "OdontoVision",
+  "description": "Sistema de gestão odontológica com agenda, controle de estoque e dashboard de KPIs.",
+  "requestFramePermissions": []
+}
