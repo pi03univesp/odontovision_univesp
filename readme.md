@@ -25,7 +25,6 @@ O **OdontoVision** foi desenvolvido para centralizar e automatizar os principais
 * **Estilização e Animações:** Tailwind CSS v4, Lucide React (Ícones), Motion
 * **Visualização de Dados:** Recharts
 * **Banco de Dados e Autenticação:** Firebase (Firestore & Firebase Auth)
-* **Inteligência Artificial:** @google/genai
 * **Manipulação de Datas:** date-fns
 
 ---
